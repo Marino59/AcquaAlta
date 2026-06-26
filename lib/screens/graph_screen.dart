@@ -9,8 +9,15 @@ import '../services/preferences_service.dart';
 
 class GraphScreen extends StatefulWidget {
   final List<TideForecast> forecast;
+  final DateTime? initialSelectedDate;
+  final ValueChanged<DateTime?>? onDateSelected;
 
-  const GraphScreen({super.key, required this.forecast});
+  const GraphScreen({
+    super.key,
+    required this.forecast,
+    this.initialSelectedDate,
+    this.onDateSelected,
+  });
 
   @override
   State<GraphScreen> createState() => _GraphScreenState();
@@ -20,12 +27,67 @@ class _GraphScreenState extends State<GraphScreen> {
   final PreferencesService _prefs = PreferencesService();
   double _maxSafeHeight = 80.0;
   List<MapEntry<DateTime, double>> _points = [];
+  List<MapEntry<DateTime, double>> _filteredPoints = [];
+  DateTime? _selectedDate;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
     _points = TideMath.generateCurve(widget.forecast);
+    _selectedDate = widget.initialSelectedDate;
+    _updateFilteredPoints();
+  }
+
+  @override
+  void didUpdateWidget(GraphScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSelectedDate != oldWidget.initialSelectedDate) {
+      setState(() {
+        _selectedDate = widget.initialSelectedDate;
+        _updateFilteredPoints();
+      });
+    }
+  }
+
+  void _updateFilteredPoints() {
+    if (_selectedDate != null) {
+      _filteredPoints = _points.where((e) {
+        return e.key.year == _selectedDate!.year &&
+               e.key.month == _selectedDate!.month &&
+               e.key.day == _selectedDate!.day;
+      }).toList();
+      if (_filteredPoints.isEmpty) {
+        _filteredPoints = _points;
+      }
+    } else {
+      _filteredPoints = _points;
+    }
+  }
+
+  List<DateTime> _getUniqueDays() {
+    List<DateTime> days = [];
+    for (var point in _points) {
+      final date = DateTime(point.key.year, point.key.month, point.key.day);
+      if (!days.any((d) => d.year == date.year && d.month == date.month && d.day == date.day)) {
+        days.add(date);
+      }
+    }
+    return days;
+  }
+
+  String _getDayChipLabel(DateTime date) {
+    final now = DateTime.now();
+    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+      return "Oggi";
+    }
+    final tomorrow = now.add(const Duration(days: 1));
+    if (date.year == tomorrow.year && date.month == tomorrow.month && date.day == tomorrow.day) {
+      return "Domani";
+    }
+    final name = DateFormat('EEEE d', 'it_IT').format(date);
+    if (name.isEmpty) return name;
+    return name[0].toUpperCase() + name.substring(1);
   }
 
   Future<void> _loadSettings() async {
@@ -40,9 +102,10 @@ class _GraphScreenState extends State<GraphScreen> {
     final minDate = DateTime.fromMillisecondsSinceEpoch(minX.toInt());
     final maxDate = DateTime.fromMillisecondsSinceEpoch(maxX.toInt());
 
-    // Align to the midnight of the starting day
+    final originalStart = _points.first.key;
+    final originalStartMidnight = DateTime(originalStart.year, originalStart.month, originalStart.day);
+
     var currentMidnight = DateTime(minDate.year, minDate.month, minDate.day);
-    int dayCount = 0;
 
     final List<Color> colors = [
       Colors.pink.withOpacity(0.20),
@@ -56,7 +119,9 @@ class _GraphScreenState extends State<GraphScreen> {
       final startX = currentMidnight.millisecondsSinceEpoch.toDouble();
       final endX = nextMidnight.millisecondsSinceEpoch.toDouble();
 
-      final color = colors[dayCount % colors.length];
+      final dayIndex = currentMidnight.difference(originalStartMidnight).inDays;
+      final color = colors[dayIndex >= 0 ? dayIndex % colors.length : 0];
+
       annotations.add(
         VerticalRangeAnnotation(
           x1: startX < minX ? minX : startX,
@@ -66,24 +131,21 @@ class _GraphScreenState extends State<GraphScreen> {
       );
 
       currentMidnight = nextMidnight;
-      dayCount++;
     }
     return annotations;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_points.isEmpty) {
+    if (_filteredPoints.isEmpty) {
       return const Center(child: Text("Dati insufficienti per il grafico"));
     }
 
-    final minX = _points.first.key.millisecondsSinceEpoch.toDouble();
-    final maxX = _points.last.key.millisecondsSinceEpoch.toDouble();
-    // Y Axis Padding
-    final minY = _points.map((e) => e.value).reduce((a, b) => a < b ? a : b) - 10;
-    final maxY = _points.map((e) => e.value).reduce((a, b) => a > b ? a : b) + 10;
+    final minX = _filteredPoints.first.key.millisecondsSinceEpoch.toDouble();
+    final maxX = _filteredPoints.last.key.millisecondsSinceEpoch.toDouble();
+    final minY = _filteredPoints.map((e) => e.value).reduce((a, b) => a < b ? a : b) - 10;
+    final maxY = _filteredPoints.map((e) => e.value).reduce((a, b) => a > b ? a : b) + 10;
     
-    // Ensure threshold is visible
     final absoluteMaxY = _maxSafeHeight > maxY ? _maxSafeHeight + 10 : maxY;
 
     return Padding(
@@ -103,6 +165,54 @@ class _GraphScreenState extends State<GraphScreen> {
                 labelStyle: const TextStyle(color: Colors.red),
               )
             ],
+          ),
+          const SizedBox(height: 15),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ChoiceChip(
+                  label: const Text("Tutti"),
+                  selected: _selectedDate == null,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedDate = null;
+                        _updateFilteredPoints();
+                      });
+                      if (widget.onDateSelected != null) {
+                        widget.onDateSelected!(null);
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                ..._getUniqueDays().map((day) {
+                  final isSelected = _selectedDate != null &&
+                      _selectedDate!.year == day.year &&
+                      _selectedDate!.month == day.month &&
+                      _selectedDate!.day == day.day;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ChoiceChip(
+                      label: Text(_getDayChipLabel(day)),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            _selectedDate = day;
+                            _updateFilteredPoints();
+                          });
+                          if (widget.onDateSelected != null) {
+                            widget.onDateSelected!(day);
+                          }
+                        }
+                      },
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
           Expanded(
@@ -151,7 +261,7 @@ class _GraphScreenState extends State<GraphScreen> {
                         final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
+                           child: Text(
                             DateFormat('E HH:mm', 'it_IT').format(date),
                             style: const TextStyle(fontSize: 9, color: Colors.grey),
                           ),
@@ -162,9 +272,8 @@ class _GraphScreenState extends State<GraphScreen> {
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
-                  // Actual Tide Curve
                   LineChartBarData(
-                    spots: _points.map((e) => FlSpot(
+                    spots: _filteredPoints.map((e) => FlSpot(
                       e.key.millisecondsSinceEpoch.toDouble(), 
                       e.value
                     )).toList(),
@@ -177,7 +286,6 @@ class _GraphScreenState extends State<GraphScreen> {
                       color: Colors.blueAccent.withOpacity(0.1)
                     ),
                   ),
-                  // Limit Line (Not supported directly as a line, using a constant line)
                 ],
                 extraLinesData: ExtraLinesData(
                   horizontalLines: [

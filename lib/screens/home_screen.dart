@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   double _maxSafeHeight = 80.0;
   int _currentIndex = 0;
+  DateTime? _selectedGraphDate;
 
   @override
   void initState() {
@@ -192,7 +193,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final pages = [
       _buildPassageStatusScreen(),
-      GraphScreen(forecast: _forecast),
+      GraphScreen(
+        forecast: _forecast,
+        initialSelectedDate: _selectedGraphDate,
+        onDateSelected: (date) {
+          setState(() {
+            _selectedGraphDate = date;
+          });
+        },
+      ),
       MapScreen(tideLevel: _currentLevel?.valueInCm ?? 0.0),
       ForecastScreen(forecast: _forecast),
       const OfficialGraphScreen(),
@@ -474,6 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: InkWell(
                                     onTap: () {
                                       setState(() {
+                                        _selectedGraphDate = item['date'] as DateTime?;
                                         _currentIndex = 1; // Switches to "Grafico" tab
                                       });
                                     },
@@ -608,7 +618,8 @@ class _HomeScreenState extends State<HomeScreen> {
          
          result.add({
            'day': capitalize(day),
-           'desc': desc
+           'desc': desc,
+           'date': chunk.start,
          });
       }
     }
