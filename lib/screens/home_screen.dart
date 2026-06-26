@@ -275,6 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     // Flatten split windows by day for natural language
     final List<Map<String, dynamic>> dailySegments = _flattenAndGroupWindows(windowsToShow, now);
+    final uniqueDays = dailySegments.map((e) => e['day'] as String).toSet().toList();
 
     if (isCurrentlySafe) {
       mainMessage = "VIA LIBERA";
@@ -430,29 +431,78 @@ class _HomeScreenState extends State<HomeScreen> {
                               final dayName = item['day'] as String;
                               final desc = item['desc'] as String;
                               
-                              return InkWell(
-                                onTap: () {
-                                  setState(() {
-                                    _currentIndex = 1; // Switches to "Grafico" tab
-                                  });
-                                },
-                                borderRadius: BorderRadius.circular(16),
+                              final dayIndex = uniqueDays.indexOf(dayName);
+                              final colorIndex = dayIndex != -1 ? dayIndex % 4 : 0;
+                              
+                              final bgColors = [
+                                Colors.pink.withOpacity(0.15),
+                                Colors.amber.withOpacity(0.18),
+                                Colors.green.withOpacity(0.15),
+                                Colors.lightBlue.withOpacity(0.15),
+                              ];
+                              
+                              final borderColors = [
+                                Colors.pink.withOpacity(0.35),
+                                Colors.amber.withOpacity(0.45),
+                                Colors.green.withOpacity(0.35),
+                                Colors.lightBlue.withOpacity(0.35),
+                              ];
+                              
+                              final textColors = [
+                                Colors.pink.shade900,
+                                Colors.amber.shade900,
+                                Colors.green.shade900,
+                                Colors.lightBlue.shade900,
+                              ];
+                              
+                              final iconColors = [
+                                Colors.pink,
+                                Colors.amber.shade800,
+                                Colors.green,
+                                Colors.lightBlue,
+                              ];
+
+                              return Material(
+                                color: Colors.transparent,
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F8E9), 
+                                    color: bgColors[colorIndex], 
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.green.shade200)
+                                    border: Border.all(color: borderColors[colorIndex])
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.calendar_today, size: 16, color: Colors.green),
-                                      const SizedBox(width: 10),
-                                      Text(dayName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                                      const Spacer(),
-                                      Text(desc, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                    ],
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _currentIndex = 1; // Switches to "Grafico" tab
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(16),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.calendar_today, size: 16, color: iconColors[colorIndex]),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            dayName, 
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: FontWeight.bold, 
+                                              color: textColors[colorIndex]
+                                            )
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            desc, 
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 16, 
+                                              fontWeight: FontWeight.bold, 
+                                              color: Colors.black87
+                                            )
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
                                 ),
                               );
