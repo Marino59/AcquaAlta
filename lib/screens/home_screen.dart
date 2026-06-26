@@ -430,22 +430,30 @@ class _HomeScreenState extends State<HomeScreen> {
                               final dayName = item['day'] as String;
                               final desc = item['desc'] as String;
                               
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F8E9), 
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: Colors.green.shade200)
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today, size: 16, color: Colors.green),
-                                    const SizedBox(width: 10),
-                                    Text(dayName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                                    const Spacer(),
-                                    Text(desc, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-                                  ],
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _currentIndex = 1; // Switches to "Grafico" tab
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1F8E9), 
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.green.shade200)
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today, size: 16, color: Colors.green),
+                                      const SizedBox(width: 10),
+                                      Text(dayName, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                                      const Spacer(),
+                                      Text(desc, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                    ],
+                                  ),
                                 ),
                               );
                             },
