@@ -192,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final pages = [
       _buildPassageStatusScreen(),
+      GraphScreen(forecast: _forecast),
       MapScreen(tideLevel: _currentLevel?.valueInCm ?? 0.0),
       ForecastScreen(forecast: _forecast),
       const OfficialGraphScreen(),
@@ -204,6 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.directions_boat), label: "Passaggio"),
+          NavigationDestination(icon: Icon(Icons.show_chart), label: "Grafico"),
           NavigationDestination(icon: Icon(Icons.map), label: "Mappa"),
           NavigationDestination(icon: Icon(Icons.list), label: "Previsioni"),
           NavigationDestination(icon: Icon(Icons.public), label: "Ufficiale"),

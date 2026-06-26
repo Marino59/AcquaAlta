@@ -42,11 +42,13 @@ class TideForecast {
   });
 
   factory TideForecast.fromJson(Map<String, dynamic> json) {
+    final valueStr = json['VALORE']?.toString() ?? '';
+    final parsedValue = double.tryParse(valueStr)?.round() ?? 0;
     return TideForecast(
       forecastDate: DateTime.parse(json['DATA_PREVISIONE']),
       extremeDate: DateTime.parse(json['DATA_ESTREMALE']),
       type: json['TIPO_ESTREMALE'] ?? '',
-      value: int.tryParse(json['VALORE'] ?? '') ?? 0,
+      value: parsedValue,
       title: json['TITOLO'] ?? '',
     );
   }

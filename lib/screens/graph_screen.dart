@@ -35,6 +35,42 @@ class _GraphScreenState extends State<GraphScreen> {
     });
   }
 
+  List<VerticalRangeAnnotation> _buildDayAnnotations(double minX, double maxX) {
+    List<VerticalRangeAnnotation> annotations = [];
+    final minDate = DateTime.fromMillisecondsSinceEpoch(minX.toInt());
+    final maxDate = DateTime.fromMillisecondsSinceEpoch(maxX.toInt());
+
+    // Align to the midnight of the starting day
+    var currentMidnight = DateTime(minDate.year, minDate.month, minDate.day);
+    int dayCount = 0;
+
+    final List<Color> colors = [
+      Colors.pink.withOpacity(0.20),
+      Colors.amber.withOpacity(0.22), // Giallo
+      Colors.green.withOpacity(0.20),
+      Colors.lightBlue.withOpacity(0.20),
+    ];
+
+    while (currentMidnight.isBefore(maxDate)) {
+      final nextMidnight = currentMidnight.add(const Duration(days: 1));
+      final startX = currentMidnight.millisecondsSinceEpoch.toDouble();
+      final endX = nextMidnight.millisecondsSinceEpoch.toDouble();
+
+      final color = colors[dayCount % colors.length];
+      annotations.add(
+        VerticalRangeAnnotation(
+          x1: startX < minX ? minX : startX,
+          x2: endX > maxX ? maxX : endX,
+          color: color,
+        ),
+      );
+
+      currentMidnight = nextMidnight;
+      dayCount++;
+    }
+    return annotations;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_points.isEmpty) {
@@ -76,6 +112,9 @@ class _GraphScreenState extends State<GraphScreen> {
                 maxX: maxX,
                 minY: minY,
                 maxY: absoluteMaxY,
+                rangeAnnotations: RangeAnnotations(
+                  verticalRangeAnnotations: _buildDayAnnotations(minX, maxX),
+                ),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: true,
@@ -113,8 +152,8 @@ class _GraphScreenState extends State<GraphScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            DateFormat('HH:mm').format(date),
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            DateFormat('E HH:mm', 'it_IT').format(date),
+                            style: const TextStyle(fontSize: 9, color: Colors.grey),
                           ),
                         );
                       },
@@ -159,13 +198,12 @@ class _GraphScreenState extends State<GraphScreen> {
                 ),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    // tooltipBgColor: Colors.blueGrey, older versions
                     getTooltipItems: (touchedSpots) {
                       return touchedSpots.map((spot) {
                         final date = DateTime.fromMillisecondsSinceEpoch(spot.x.toInt());
                         return LineTooltipItem(
-                          "${DateFormat('HH:mm').format(date)}\n${spot.y.toStringAsFixed(1)} cm",
-                          const TextStyle(color: Colors.white),
+                          "${DateFormat('E d MMM HH:mm', 'it_IT').format(date)}\n${spot.y.toStringAsFixed(0)} cm",
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         );
                       }).toList();
                     },
