@@ -20,10 +20,12 @@ class TideService {
       return null;
     }
 
-    // On Web, use CORS proxies with fallback.
-    // Ensure URL is encoded with Uri.encodeComponent to avoid proxy 500 errors.
+    // On Web, use high-speed Cloudflare Worker CORS proxies with fallback.
+    // Ensure URL is encoded with Uri.encodeComponent to avoid proxy parsing errors.
     final encoded = Uri.encodeComponent(originalUrl);
     final proxyUrls = [
+      'https://cors-anywhere.pulkitpareekofficial.workers.dev/?url=$encoded',
+      'https://dry-surf-6b16.joshua-ed.workers.dev/?url=$encoded',
       'https://api.allorigins.win/raw?url=$encoded',
       'https://api.cors.lol/?url=$encoded',
     ];
