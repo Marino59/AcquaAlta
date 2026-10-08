@@ -42,9 +42,17 @@ class _GraphScreenState extends State<GraphScreen> {
   @override
   void didUpdateWidget(GraphScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    bool shouldUpdate = false;
+    if (widget.forecast != oldWidget.forecast) {
+      _points = TideMath.generateCurve(widget.forecast);
+      shouldUpdate = true;
+    }
     if (widget.initialSelectedDate != oldWidget.initialSelectedDate) {
+      _selectedDate = widget.initialSelectedDate;
+      shouldUpdate = true;
+    }
+    if (shouldUpdate) {
       setState(() {
-        _selectedDate = widget.initialSelectedDate;
         _updateFilteredPoints();
       });
     }

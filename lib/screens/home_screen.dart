@@ -321,16 +321,23 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
+    final mediaQuery = MediaQuery.of(context);
+    final isLandscape = mediaQuery.size.width > mediaQuery.size.height;
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: isLandscape ? 40 : 48,
+        title: isLandscape 
+            ? Text("Passaggio Barca", style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87))
+            : null,
         actions: [
           IconButton(
             icon: const Icon(Icons.access_time_rounded), 
             color: Colors.black54,
-            tooltip: "Vedi previsione",
+            tooltip: "Vedi previsione ad un'ora specifica",
             onPressed: _showPredictionTimer
           ),
           IconButton(
@@ -344,220 +351,453 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Top Section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                           Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              color: mainColor.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isCurrentlySafe ? Icons.directions_boat : Icons.no_transfer,
-                              size: 50,
-                              color: mainColor,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            mainMessage,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 40, 
-                              fontWeight: FontWeight.w900,
-                              color: mainColor,
-                              height: 1.0
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                           Text(
-                            subMessage,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black87
-                            ),
-                          ),
-                           const SizedBox(height: 20),
-                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                )
-                              ]
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      isDataAvailable ? "${currentVal.toStringAsFixed(0)} cm" : "-- cm",
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.bold, 
-                                        fontSize: 32,
-                                        color: Colors.black87
-                                      ),
-                                    ),
-                                    if (isDataAvailable) ...[
-                                      const SizedBox(width: 8),
-                                      Icon(trendIcon, color: trendColor, size: 32),
-                                    ],
-                                  ],
-                                ),
-                                if (isDataAvailable && !hasSensor && estimatedVal != null)
-                                  Text(
-                                    "(stima da previsione)",
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                           )
-                        ],
-                      ),
-                    ),
-                    
-                    // Bottom Section
-                    Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-                        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))]
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 24, 24, 10),
-                            child: Text(
-                              "Prossimi orari di passaggio",
-                              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            physics: const NeverScrollableScrollPhysics(),
-                            shrinkWrap: true,
-                            itemCount: dailySegments.length,
-                            itemBuilder: (context, index) {
-                              final item = dailySegments[index];
-                              final dayName = item['day'] as String;
-                              final desc = item['desc'] as String;
-                              
-                              final dayIndex = uniqueDays.indexOf(dayName);
-                              final colorIndex = dayIndex != -1 ? dayIndex % 4 : 0;
-                              
-                              final bgColors = [
-                                Colors.pink.withOpacity(0.15),
-                                Colors.amber.withOpacity(0.18),
-                                Colors.green.withOpacity(0.15),
-                                Colors.lightBlue.withOpacity(0.15),
-                              ];
-                              
-                              final borderColors = [
-                                Colors.pink.withOpacity(0.35),
-                                Colors.amber.withOpacity(0.45),
-                                Colors.green.withOpacity(0.35),
-                                Colors.lightBlue.withOpacity(0.35),
-                              ];
-                              
-                              final textColors = [
-                                Colors.pink.shade900,
-                                Colors.amber.shade900,
-                                Colors.green.shade900,
-                                Colors.lightBlue.shade900,
-                              ];
-                              
-                              final iconColors = [
-                                Colors.pink,
-                                Colors.amber.shade800,
-                                Colors.green,
-                                Colors.lightBlue,
-                              ];
+        child: isLandscape
+            ? _buildLandscapePassageLayout(
+                mainColor: mainColor,
+                isCurrentlySafe: isCurrentlySafe,
+                mainMessage: mainMessage,
+                subMessage: subMessage,
+                isDataAvailable: isDataAvailable,
+                currentVal: currentVal,
+                trendIcon: trendIcon,
+                trendColor: trendColor,
+                hasSensor: hasSensor,
+                estimatedVal: estimatedVal,
+                dailySegments: dailySegments,
+                uniqueDays: uniqueDays,
+              )
+            : _buildPortraitPassageLayout(
+                mainColor: mainColor,
+                isCurrentlySafe: isCurrentlySafe,
+                mainMessage: mainMessage,
+                subMessage: subMessage,
+                isDataAvailable: isDataAvailable,
+                currentVal: currentVal,
+                trendIcon: trendIcon,
+                trendColor: trendColor,
+                hasSensor: hasSensor,
+                estimatedVal: estimatedVal,
+                dailySegments: dailySegments,
+                uniqueDays: uniqueDays,
+              ),
+      ),
+    );
+  }
 
-                              return Material(
-                                color: Colors.transparent,
-                                child: Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  decoration: BoxDecoration(
-                                    color: bgColors[colorIndex], 
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: borderColors[colorIndex])
-                                  ),
-                                  child: InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _selectedGraphDate = item['date'] as DateTime?;
-                                        _currentIndex = 1; // Switches to "Grafico" tab
-                                      });
-                                    },
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.calendar_today, size: 16, color: iconColors[colorIndex]),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            dayName, 
-                                            style: GoogleFonts.outfit(
-                                              fontWeight: FontWeight.bold, 
-                                              color: textColors[colorIndex]
-                                            )
-                                          ),
-                                          const Spacer(),
-                                          Text(
-                                            desc, 
-                                            style: GoogleFonts.outfit(
-                                              fontSize: 16, 
-                                              fontWeight: FontWeight.bold, 
-                                              color: Colors.black87
-                                            )
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+  Widget _buildLandscapePassageLayout({
+    required Color mainColor,
+    required bool isCurrentlySafe,
+    required String mainMessage,
+    required String subMessage,
+    required bool isDataAvailable,
+    required double currentVal,
+    required IconData trendIcon,
+    required Color trendColor,
+    required bool hasSensor,
+    required double? estimatedVal,
+    required List<Map<String, dynamic>> dailySegments,
+    required List<String> uniqueDays,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Left column: Status Card (~45%)
+        Expanded(
+          flex: 5,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 66,
+                    height: 66,
+                    decoration: BoxDecoration(
+                      color: mainColor.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isCurrentlySafe ? Icons.directions_boat : Icons.no_transfer,
+                      size: 36,
+                      color: mainColor,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    mainMessage,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 30, 
+                      fontWeight: FontWeight.w900,
+                      color: mainColor,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    subMessage,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isDataAvailable ? "${currentVal.toStringAsFixed(0)} cm" : "-- cm",
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 24,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            if (isDataAvailable) ...[
+                              const SizedBox(width: 6),
+                              Icon(trendIcon, color: trendColor, size: 24),
+                            ],
+                          ],
+                        ),
+                        if (isDataAvailable && !hasSensor && estimatedVal != null)
+                          Text(
+                            "(stima da previsione)",
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                          const SizedBox(height: 40), // Bottom padding
-                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Right column: "Prossimi orari di passaggio" Card (~55%)
+        Expanded(
+          flex: 6,
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(0, 4, 12, 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 2))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule, size: 18, color: Colors.black87),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Prossimi orari di passaggio",
+                        style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                Expanded(
+                  child: dailySegments.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              isDataAvailable
+                                  ? "Nessun passaggio sicuro previsto per ${_maxSafeHeight.round()} cm nelle prossime ore."
+                                  : "In attesa dei dati di previsione...",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 13),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          itemCount: dailySegments.length,
+                          itemBuilder: (context, index) => _buildPassageTile(dailySegments[index], uniqueDays),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortraitPassageLayout({
+    required Color mainColor,
+    required bool isCurrentlySafe,
+    required String mainMessage,
+    required String subMessage,
+    required bool isDataAvailable,
+    required double currentVal,
+    required IconData trendIcon,
+    required Color trendColor,
+    required bool hasSensor,
+    required double? estimatedVal,
+    required List<Map<String, dynamic>> dailySegments,
+    required List<String> uniqueDays,
+  }) {
+    return Column(
+      children: [
+        // Top Section: Status
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+          child: Column(
+            children: [
+              Container(
+                width: 74,
+                height: 74,
+                decoration: BoxDecoration(
+                  color: mainColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isCurrentlySafe ? Icons.directions_boat : Icons.no_transfer,
+                  size: 40,
+                  color: mainColor,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                mainMessage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 34, 
+                  fontWeight: FontWeight.w900,
+                  color: mainColor,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subMessage,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     )
                   ],
-                 ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isDataAvailable ? "${currentVal.toStringAsFixed(0)} cm" : "-- cm",
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 28,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        if (isDataAvailable) ...[
+                          const SizedBox(width: 8),
+                          Icon(trendIcon, color: trendColor, size: 28),
+                        ],
+                      ],
+                    ),
+                    if (isDataAvailable && !hasSensor && estimatedVal != null)
+                      Text(
+                        "(stima da previsione)",
+                        style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            );
-          }
+            ],
+          ),
+        ),
+
+        // Bottom Section: Expand to remaining screen height!
+        Expanded(
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(28),
+                topRight: Radius.circular(28),
+              ),
+              boxShadow: [
+                BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule, size: 20, color: Colors.black87),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Prossimi orari di passaggio",
+                        style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, indent: 20, endIndent: 20),
+                Expanded(
+                  child: dailySegments.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Text(
+                              isDataAvailable
+                                  ? "Nessun passaggio sicuro previsto per ${_maxSafeHeight.round()} cm nelle prossime ore.\nPuoi modificare l'altezza limite barca nelle impostazioni in alto."
+                                  : "In attesa dei dati di previsione...",
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(color: Colors.grey.shade600, fontSize: 14),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          itemCount: dailySegments.length,
+                          itemBuilder: (context, index) => _buildPassageTile(dailySegments[index], uniqueDays),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPassageTile(Map<String, dynamic> item, List<String> uniqueDays) {
+    final dayName = item['day'] as String;
+    final desc = item['desc'] as String;
+    
+    final dayIndex = uniqueDays.indexOf(dayName);
+    final colorIndex = dayIndex != -1 ? dayIndex % 4 : 0;
+    
+    final bgColors = [
+      Colors.pink.withOpacity(0.12),
+      Colors.amber.withOpacity(0.15),
+      Colors.green.withOpacity(0.12),
+      Colors.lightBlue.withOpacity(0.12),
+    ];
+    
+    final borderColors = [
+      Colors.pink.withOpacity(0.35),
+      Colors.amber.withOpacity(0.40),
+      Colors.green.withOpacity(0.35),
+      Colors.lightBlue.withOpacity(0.35),
+    ];
+    
+    final textColors = [
+      Colors.pink.shade900,
+      Colors.amber.shade900,
+      Colors.green.shade900,
+      Colors.lightBlue.shade900,
+    ];
+    
+    final iconColors = [
+      Colors.pink,
+      Colors.amber.shade800,
+      Colors.green,
+      Colors.lightBlue,
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: bgColors[colorIndex], 
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColors[colorIndex])
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            setState(() {
+              _selectedGraphDate = item['date'] as DateTime?;
+              _currentIndex = 1; // Switches to "Grafico" tab
+            });
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: iconColors[colorIndex]),
+                const SizedBox(width: 8),
+                Text(
+                  dayName, 
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 15,
+                    color: textColors[colorIndex]
+                  )
+                ),
+                const Spacer(),
+                Flexible(
+                  child: Text(
+                    desc, 
+                    textAlign: TextAlign.end,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15, 
+                      fontWeight: FontWeight.bold, 
+                      color: Colors.black87
+                    )
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
