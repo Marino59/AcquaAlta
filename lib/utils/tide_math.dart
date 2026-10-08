@@ -85,9 +85,7 @@ class TideMath {
        final level = point.value;
        
        if (level <= maxHeight) {
-         if (currentWindow == null) {
-           currentWindow = [time];
-         }
+         currentWindow ??= [time];
        } else {
          if (currentWindow != null) {
            currentWindow.add(time);

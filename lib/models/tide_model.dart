@@ -13,16 +13,21 @@ class TideLevel {
 
   factory TideLevel.fromJson(Map<String, dynamic> json) {
     return TideLevel(
-      stationId: json['ID_stazione'] ?? '',
-      stationName: json['stazione'] ?? '',
-      value: json['valore'] ?? '0 m',
-      date: DateTime.parse(json['data']),
+      stationId: json['ID_stazione']?.toString() ?? '',
+      stationName: json['stazione']?.toString() ?? '',
+      value: json['valore']?.toString() ?? '0 m',
+      date: DateTime.tryParse(json['data']?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
   double get valueInCm {
-    final cleanValue = value.replaceAll(' m', '').trim();
-    return (double.tryParse(cleanValue) ?? 0.0) * 100;
+    final cleanValue = value.replaceAll(' m', '').replaceAll('m', '').replaceAll(',', '.').trim();
+    final parsed = double.tryParse(cleanValue);
+    if (parsed == null || parsed <= -900) {
+      // -999 indicates missing sensor data in CPSM
+      return 0.0;
+    }
+    return parsed * 100;
   }
 }
 
@@ -43,13 +48,13 @@ class TideForecast {
 
   factory TideForecast.fromJson(Map<String, dynamic> json) {
     final valueStr = json['VALORE']?.toString() ?? '';
-    final parsedValue = double.tryParse(valueStr)?.round() ?? 0;
+    final parsedValue = double.tryParse(valueStr.replaceAll(',', '.'))?.round() ?? 0;
     return TideForecast(
-      forecastDate: DateTime.parse(json['DATA_PREVISIONE']),
-      extremeDate: DateTime.parse(json['DATA_ESTREMALE']),
-      type: json['TIPO_ESTREMALE'] ?? '',
+      forecastDate: DateTime.tryParse(json['DATA_PREVISIONE']?.toString() ?? '') ?? DateTime.now(),
+      extremeDate: DateTime.tryParse(json['DATA_ESTREMALE']?.toString() ?? '') ?? DateTime.now(),
+      type: json['TIPO_ESTREMALE']?.toString() ?? '',
       value: parsedValue,
-      title: json['TITOLO'] ?? '',
+      title: json['TITOLO']?.toString() ?? '',
     );
   }
 }

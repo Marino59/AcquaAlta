@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../models/tide_model.dart';
@@ -61,6 +60,9 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e, stack) {
       debugPrint("ERROR LOADING DATA: $e");
       debugPrint(stack.toString());
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -202,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
       ),
-      MapScreen(tideLevel: _currentLevel?.valueInCm ?? 0.0),
+      MapScreen(tideLevel: _currentLevel?.valueInCm ?? (_forecast.isNotEmpty ? TideMath.estimateTideLevelFromList(DateTime.now(), _forecast) : 0.0)),
       ForecastScreen(forecast: _forecast),
       const OfficialGraphScreen(),
     ];
@@ -224,13 +226,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPassageStatusScreen() {
-    final currentVal = _currentLevel?.valueInCm ?? 0.0;
+    final bool hasSensor = _currentLevel != null;
+    final double? sensorVal = _currentLevel?.valueInCm;
+    final double? estimatedVal = _forecast.isNotEmpty
+        ? TideMath.estimateTideLevelFromList(DateTime.now(), _forecast)
+        : null;
+    final double currentVal = sensorVal ?? estimatedVal ?? 0.0;
+    final bool isDataAvailable = sensorVal != null || estimatedVal != null;
     
     // IMPORTANT: Prioritize REAL TIME sensor data for "Current State"
     final isCurrentlySafe = currentVal <= _maxSafeHeight;
 
     // Trend Calculation - Use REAL-TIME sensor value
-    final trend = TideMath.getTrend(currentVal, _forecast);
+    final trend = isDataAvailable ? TideMath.getTrend(currentVal, _forecast) : 0;
     IconData trendIcon;
     Color trendColor = Colors.grey;
     if (trend > 0) {
@@ -244,8 +252,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     
     // Theme Colors
-    final bgColor = isCurrentlySafe ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE); 
-    final mainColor = isCurrentlySafe ? const Color(0xFF2E7D32) : const Color(0xFFC62828); 
+    final bgColor = !isDataAvailable
+        ? Colors.grey.shade200
+        : (isCurrentlySafe ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE)); 
+    final mainColor = !isDataAvailable
+        ? Colors.grey.shade700
+        : (isCurrentlySafe ? const Color(0xFF2E7D32) : const Color(0xFFC62828)); 
     
     // Calculate Windows (for the list)
     final allWindows = TideMath.findSafeWindows(_forecast, _maxSafeHeight);
@@ -286,7 +298,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Map<String, dynamic>> dailySegments = _flattenAndGroupWindows(windowsToShow, now);
     final uniqueDays = dailySegments.map((e) => e['day'] as String).toSet().toList();
 
-    if (isCurrentlySafe) {
+    if (!isDataAvailable) {
+      mainMessage = "DATI NON DISPONIBILI";
+      subMessage = "Impossibile recuperare i dati dal Centro Maree.";
+    } else if (isCurrentlySafe) {
       mainMessage = "VIA LIBERA";
       if (nextEventTime != null) {
          if (nextEventTime.difference(now).inHours > 24) {
@@ -392,19 +407,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                 )
                               ]
                             ),
-                            child: Row(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  "${currentVal.toStringAsFixed(0)} cm",
-                                  style: GoogleFonts.outfit(
-                                    fontWeight: FontWeight.bold, 
-                                    fontSize: 32,
-                                    color: Colors.black87
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      isDataAvailable ? "${currentVal.toStringAsFixed(0)} cm" : "-- cm",
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.bold, 
+                                        fontSize: 32,
+                                        color: Colors.black87
+                                      ),
+                                    ),
+                                    if (isDataAvailable) ...[
+                                      const SizedBox(width: 8),
+                                      Icon(trendIcon, color: trendColor, size: 32),
+                                    ],
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Icon(trendIcon, color: trendColor, size: 32),
+                                if (isDataAvailable && !hasSensor && estimatedVal != null)
+                                  Text(
+                                    "(stima da previsione)",
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                               ],
                             ),
                            )
