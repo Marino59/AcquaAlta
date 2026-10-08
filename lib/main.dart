@@ -7,16 +7,7 @@ import 'package:flutter/services.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-  ]).then((_) {
-    initializeDateFormatting('it_IT', null).then((_) {
-      runApp(const VeniceTideApp());
-    });
-  });
+  runApp(const VeniceTideApp());
 }
 
 class VeniceTideApp extends StatelessWidget {

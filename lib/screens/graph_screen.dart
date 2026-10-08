@@ -1,9 +1,9 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../models/tide_model.dart';
 import '../utils/tide_math.dart';
+import '../utils/italian_date_helper.dart';
 import '../services/preferences_service.dart';
 
 
@@ -85,17 +85,7 @@ class _GraphScreenState extends State<GraphScreen> {
   }
 
   String _getDayChipLabel(DateTime date) {
-    final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      return "Oggi";
-    }
-    final tomorrow = now.add(const Duration(days: 1));
-    if (date.year == tomorrow.year && date.month == tomorrow.month && date.day == tomorrow.day) {
-      return "Domani";
-    }
-    final name = DateFormat('EEEE d', 'it_IT').format(date);
-    if (name.isEmpty) return name;
-    return name[0].toUpperCase() + name.substring(1);
+    return ItalianDateHelper.getDayChipLabel(date, DateTime.now());
   }
 
   Future<void> _loadSettings() async {
@@ -270,7 +260,7 @@ class _GraphScreenState extends State<GraphScreen> {
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                            child: Text(
-                            DateFormat('E HH:mm', 'it_IT').format(date),
+                            ItalianDateHelper.formatGraphAxisDate(date),
                             style: const TextStyle(fontSize: 9, color: Colors.grey),
                           ),
                         );
@@ -318,7 +308,7 @@ class _GraphScreenState extends State<GraphScreen> {
                       return touchedSpots.map((spot) {
                         final date = DateTime.fromMillisecondsSinceEpoch(spot.x.toInt());
                         return LineTooltipItem(
-                          "${DateFormat('E d MMM HH:mm', 'it_IT').format(date)}\n${spot.y.toStringAsFixed(0)} cm",
+                          "${ItalianDateHelper.formatTooltipDate(date)}\n${spot.y.toStringAsFixed(0)} cm",
                           const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         );
                       }).toList();

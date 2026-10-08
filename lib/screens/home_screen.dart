@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../models/tide_model.dart';
 import '../services/tide_service.dart';
 import '../services/preferences_service.dart';
 import '../utils/tide_math.dart';
+import '../utils/italian_date_helper.dart';
 import 'graph_screen.dart';
 import 'forecast_screen.dart';
 import 'official_graph_screen.dart';
@@ -38,10 +38,13 @@ class _HomeScreenState extends State<HomeScreen> {
     debugPrint("LOADING DATA...");
     setState(() => _loading = true);
     try {
-      final current = await _service.getCurrentTide();
+      final results = await Future.wait([
+        _service.getCurrentTide(),
+        _service.getForecast(),
+      ]);
+      final current = results[0] as TideLevel?;
+      final forecast = results[1] as List<TideForecast>;
       debugPrint("Current Tide: ${current?.valueInCm}");
-      
-      final forecast = await _service.getForecast();
       debugPrint("Forecast items: ${forecast.length}");
       
       final mh = await _prefs.getMaxSafeHeight();
@@ -171,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                _getDayName(target) == 'oggi' ? "Oggi" : "Domani",
+                ItalianDateHelper.getDayNameNatural(target, now) == 'oggi' ? "Oggi" : "Domani",
                 style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey),
               )
             ],
@@ -295,7 +298,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // ---------------------------
     
     // Flatten split windows by day for natural language
-    final List<Map<String, dynamic>> dailySegments = _flattenAndGroupWindows(windowsToShow, now);
+    List<Map<String, dynamic>> dailySegments = [];
+    try {
+      dailySegments = _flattenAndGroupWindows(windowsToShow, now);
+    } catch (e, stack) {
+      debugPrint("Error in _flattenAndGroupWindows: $e\n$stack");
+    }
     final uniqueDays = dailySegments.map((e) => e['day'] as String).toSet().toList();
 
     if (!isDataAvailable) {
@@ -307,7 +315,7 @@ class _HomeScreenState extends State<HomeScreen> {
          if (nextEventTime.difference(now).inHours > 24) {
              subMessage = "Nessun problema per le prossime 24h+";
          } else {
-             subMessage = "fino alle ${_formatTimeNatural(nextEventTime)} di ${_getDayName(nextEventTime)}";
+             subMessage = "fino alle ${ItalianDateHelper.formatTimeNatural(nextEventTime)} di ${ItalianDateHelper.getDayNameNatural(nextEventTime, now)}";
          }
       } else {
          subMessage = "Nessun rialzo critico previsto.";
@@ -315,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       mainMessage = "NON PASSI";
       if (nextEventTime != null) {
-          subMessage = "fino alle ${_formatTimeNatural(nextEventTime)} di ${_getDayName(nextEventTime)}";
+          subMessage = "fino alle ${ItalianDateHelper.formatTimeNatural(nextEventTime)} di ${ItalianDateHelper.getDayNameNatural(nextEventTime, now)}";
       } else {
           subMessage = "Marea troppo alta per le prossime ore.";
       }
@@ -805,73 +813,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- Natural Language Helpers ---
 
-  String _formatTimeNatural(DateTime t) {
-    // "1 e 45" instead of "1:45"
-    final h = t.hour; // 0-23
-    final m = t.minute;
-    final mStr = m.toString().padLeft(2, '0');
-    return "$h e $mStr"; // Simple: 13 e 10
-  }
-
   List<Map<String, dynamic>> _flattenAndGroupWindows(List<List<DateTime>> windows, DateTime now) {
     List<Map<String, dynamic>> result = [];
-    
-    // We need to split windows across midnights to group by day properly
-    // e.g. Mon 22:00 -> Tue 02:00 becomes:
-    // Mon: dalle 22 e 00
-    // Tue: fino alle 2 e 00
-    
-    // 1. Flatten into daily chunks
     List<_DailyChunk> chunks = [];
     
     for (var w in windows) {
       DateTime start = w.first;
       DateTime end = w.last;
       
-      // If start is before now (merged current window), clap to now
       if (start.isBefore(now)) start = now;
-      if (end.isBefore(start)) continue; // Safety check
+      if (end.isBefore(start)) continue;
 
       while (!isSameDay(start, end)) {
-        // Chunk ends at midnight of the next day
         final nextMidnight = DateTime(start.year, start.month, start.day + 1);
-        chunks.add(_DailyChunk(start, nextMidnight.subtract(const Duration(seconds: 1)))); // 23:59:59
-        start = nextMidnight; // Start next chunk at 00:00
+        chunks.add(_DailyChunk(start, nextMidnight.subtract(const Duration(seconds: 1))));
+        start = nextMidnight;
       }
-      // Add remainder
       chunks.add(_DailyChunk(start, end));
     }
 
-    // 2. Group by Day String
     final Map<String, List<_DailyChunk>> grouped = {};
     for (var chunk in chunks) {
-      final key = _getDayName(chunk.start); // "Oggi", "Lunedi", etc.
+      final key = ItalianDateHelper.getDayNameNatural(chunk.start, now);
       grouped.putIfAbsent(key, () => []).add(chunk);
     }
     
-    // 3. Format strings per day
-    // Possible cases per day:
-    // A. Starts at 00:00 (or Now for Today) AND Ends at 23:59 -> "Sempre"
-    // B. Starts at 00:00 (or Now) AND Ends at X -> "fino alle X"
-    // C. Starts at X AND Ends at 23:59 -> "dalle X"
-    // D. Starts at X AND Ends at Y -> "dalle X alle Y"
-    
-    // Note: A day might have multiple chunks (e.g. 00-02 and 22-24).
-    // We iterate grouped keys in order implicitly? Ideally sort by date.
-    
-    // Let's rely on the original list order which is chronological.
-    // We need to iterate the linked hash map keys in insertion order?
-    // Map iterates keys in insertion order in Dart.
-    
-    final sortedKeys = grouped.keys.toList(); // Should be roughly ordered
-    debugPrint("Sorted Keys: $sortedKeys");
-    
+    final sortedKeys = grouped.keys.toList();
     for (var day in sortedKeys) {
       final dayChunks = grouped[day];
-      if (dayChunks == null) {
-         debugPrint("ERROR: grouped[$day] is null!");
-         continue;
-      }
+      if (dayChunks == null) continue;
       for (var chunk in dayChunks) {
          String desc = "";
          final isStartOfDay = (chunk.start.hour == 0 && chunk.start.minute == 0) || (day == "oggi" && chunk.start.difference(now).inMinutes.abs() < 5);
@@ -880,15 +850,15 @@ class _HomeScreenState extends State<HomeScreen> {
          if (isStartOfDay && isEndOfDay) {
            desc = "Sempre";
          } else if (isStartOfDay) {
-           desc = "fino alle ${_formatTimeNatural(chunk.end)}";
+           desc = "fino alle ${ItalianDateHelper.formatTimeNatural(chunk.end)}";
          } else if (isEndOfDay) {
-           desc = "dalle ${_formatTimeNatural(chunk.start)}";
+           desc = "dalle ${ItalianDateHelper.formatTimeNatural(chunk.start)}";
          } else {
-           desc = "dalle ${_formatTimeNatural(chunk.start)} alle ${_formatTimeNatural(chunk.end)}";
+           desc = "dalle ${ItalianDateHelper.formatTimeNatural(chunk.start)} alle ${ItalianDateHelper.formatTimeNatural(chunk.end)}";
          }
          
          result.add({
-           'day': capitalize(day),
+           'day': ItalianDateHelper.capitalize(day),
            'desc': desc,
            'date': chunk.start,
          });
@@ -900,18 +870,6 @@ class _HomeScreenState extends State<HomeScreen> {
   
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
-
-  String capitalize(String s) {
-    if (s.isEmpty) return s;
-    return s[0].toUpperCase() + s.substring(1);
-  }
-
-  String _getDayName(DateTime date) {
-    final now = DateTime.now();
-    if (date.day == now.day && date.month == now.month) return "oggi";
-    if (date.day == now.add(const Duration(days: 1)).day) return "domani";
-    return DateFormat('EEEE', 'it_IT').format(date);
   }
 }
 

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../models/tide_model.dart';
-
+import '../utils/italian_date_helper.dart';
 
 class ForecastScreen extends StatelessWidget {
   final List<TideForecast> forecast;
@@ -39,8 +38,8 @@ class ForecastScreen extends StatelessWidget {
 
   Widget _buildForecastItem(TideForecast item) {
     final isMax = item.type == 'max';
-    final dateStr = DateFormat('EEE d MMM', 'it_IT').format(item.extremeDate);
-    final timeStr = DateFormat('HH:mm').format(item.extremeDate);
+    final dateStr = ItalianDateHelper.formatForecastDate(item.extremeDate);
+    final timeStr = ItalianDateHelper.formatClockTime(item.extremeDate);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),

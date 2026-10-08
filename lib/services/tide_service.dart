@@ -44,7 +44,7 @@ class TideService {
 
     // Last resort fallback: direct fetch in case CORS headers or extension are available
     try {
-      final response = await http.get(Uri.parse(originalUrl)).timeout(const Duration(seconds: 5));
+      final response = await http.get(Uri.parse(originalUrl)).timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         return response.body;
       }
@@ -52,6 +52,9 @@ class TideService {
 
     return null;
   }
+
+  static TideLevel? _cachedLevel;
+  static List<TideForecast> _cachedForecast = [];
 
   Future<TideLevel?> getCurrentTide() async {
     try {
@@ -96,13 +99,15 @@ class TideService {
         );
 
         if (stationData != null) {
-          return TideLevel.fromJson(stationData);
+          final level = TideLevel.fromJson(stationData);
+          _cachedLevel = level;
+          return level;
         }
       }
     } catch (e) {
       debugPrint('Error fetching current tide: $e');
     }
-    return null;
+    return _cachedLevel;
   }
 
   Future<List<TideForecast>> getForecast() async {
@@ -112,12 +117,15 @@ class TideService {
         final List<dynamic> data = json.decode(body);
         final list = data.map((e) => TideForecast.fromJson(e)).toList();
         list.sort((a, b) => a.extremeDate.compareTo(b.extremeDate));
-        return list;
+        if (list.isNotEmpty) {
+          _cachedForecast = list;
+          return list;
+        }
       }
     } catch (e) {
       debugPrint('Error fetching forecast: $e');
     }
-    return [];
+    return _cachedForecast;
   }
 }
 
